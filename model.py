@@ -19,9 +19,15 @@ with open('./simulator-data/driving_log.csv', 'r') as csvfile:
         img_path = get_current_path(line[0])
         img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
         images.append(img)
+
+        flipped_img = np.fliplr(img)
+        images.append(flipped_img)
         
         measurement = float(line[3])
         measurements.append(measurement)
+
+        measurement_for_flipped_img = -measurement
+        measurements.append(measurement_for_flipped_img)
         
         
 X_train = np.array(images)
@@ -33,5 +39,5 @@ model.add(Flatten())
 model.add(Dense(1))
 
 model.compile(loss='mse', optimizer='adam')
-model.fit(X_train, y_train, validation_split=0.2, shuffle=True, epochs=4)
+model.fit(X_train, y_train, validation_split=0.2, shuffle=True, epochs=2)
 model.save('model.h5')
