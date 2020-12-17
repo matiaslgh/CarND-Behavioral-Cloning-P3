@@ -2,7 +2,7 @@ import csv
 import cv2
 import numpy as np
 from keras.models import Sequential
-from keras.layers import Flatten, Dense
+from keras.layers import Flatten, Dense, Lambda
 
 DATA_DIRECTORY = './simulator-data/IMG/'
 
@@ -17,7 +17,7 @@ with open('./simulator-data/driving_log.csv', 'r') as csvfile:
     reader = csv.reader(csvfile)
     for line in reader:
         img_path = get_current_path(line[0])
-        img = cv2.imread(img_path)
+        img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
         images.append(img)
         
         measurement = float(line[3])
@@ -28,7 +28,8 @@ X_train = np.array(images)
 y_train = np.array(measurements)
 
 model = Sequential()
-model.add(Flatten(input_shape=(160, 320, 3)))
+model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(160, 320, 3)))
+model.add(Flatten())
 model.add(Dense(1))
 
 model.compile(loss='mse', optimizer='adam')
