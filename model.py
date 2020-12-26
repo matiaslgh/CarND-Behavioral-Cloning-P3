@@ -2,7 +2,7 @@ import csv
 import cv2
 import numpy as np
 from keras.models import Sequential
-from keras.layers import Flatten, Dense, Lambda, Cropping2D
+from keras.layers import Flatten, Dense, Lambda, Cropping2D, Conv2D
 import sklearn
 from sklearn.model_selection import train_test_split
 from math import ceil
@@ -67,7 +67,15 @@ with open('./simulator-data/driving_log.csv', 'r') as csvfile:
 model = Sequential()
 model.add(Cropping2D(cropping=((70, 25), (0, 0)), input_shape=(160, 320, 3)))
 model.add(Lambda(lambda x: x / 255.0 - 0.5))
+model.add(Conv2D(filters=24, kernel_size=5, strides=(2, 2), activation='relu'))
+model.add(Conv2D(filters=36, kernel_size=5, strides=(2, 2), activation='relu'))
+model.add(Conv2D(filters=48, kernel_size=5, strides=(2, 2), activation='relu'))
+model.add(Conv2D(filters=64, kernel_size=3, activation='relu'))
+model.add(Conv2D(filters=64, kernel_size=3, activation='relu'))
 model.add(Flatten())
+model.add(Dense(100))
+model.add(Dense(50))
+model.add(Dense(10))
 model.add(Dense(1))
 
 # compile and train the model using the generator function
@@ -81,7 +89,7 @@ model.fit_generator(
     steps_per_epoch= ceil(len(train_samples) * IMAGES_PER_CSV_LINE / BATCH_SIZE),
     validation_data=validation_generator,
     validation_steps=ceil(len(validation_samples) * IMAGES_PER_CSV_LINE / BATCH_SIZE),
-    epochs=1,
+    epochs=2,
     verbose=1
 )
 model.save('model.h5')
