@@ -2,13 +2,13 @@ import csv
 import cv2
 import numpy as np
 from keras.models import Sequential
-from keras.layers import Flatten, Dense, Lambda, Cropping2D, Conv2D
+from keras.layers import Flatten, Dense, Lambda, Cropping2D, Conv2D, Dropout
 import sklearn
 from sklearn.model_selection import train_test_split
 from math import ceil
 
 BATCH_SIZE = 30
-CORRECTION = 0.17
+CORRECTION = 0.15
 IMAGES_PER_CSV_LINE = 6 # Left, Center, Right + their flipped versions
 DATA_DIRECTORY = './simulator-data/IMG/'
 
@@ -49,7 +49,7 @@ def generator(samples, batch_size=32):
             measurements = []
 
             for batch_sample in batch_samples:
-                for img, measurement in get_images_with_measurements(line):
+                for img, measurement in get_images_with_measurements(batch_sample):
                     images.append(img)
                     measurements.append(measurement)
 
@@ -68,14 +68,22 @@ model = Sequential()
 model.add(Cropping2D(cropping=((70, 25), (0, 0)), input_shape=(160, 320, 3)))
 model.add(Lambda(lambda x: x / 255.0 - 0.5))
 model.add(Conv2D(filters=24, kernel_size=5, strides=(2, 2), activation='relu'))
+model.add(Dropout(0.1))
 model.add(Conv2D(filters=36, kernel_size=5, strides=(2, 2), activation='relu'))
+model.add(Dropout(0.1))
 model.add(Conv2D(filters=48, kernel_size=5, strides=(2, 2), activation='relu'))
+model.add(Dropout(0.1))
 model.add(Conv2D(filters=64, kernel_size=3, activation='relu'))
+model.add(Dropout(0.1))
 model.add(Conv2D(filters=64, kernel_size=3, activation='relu'))
+model.add(Dropout(0.1))
 model.add(Flatten())
 model.add(Dense(100))
+model.add(Dropout(0.2))
 model.add(Dense(50))
+model.add(Dropout(0.2))
 model.add(Dense(10))
+model.add(Dropout(0.2))
 model.add(Dense(1))
 
 # compile and train the model using the generator function
@@ -89,7 +97,7 @@ model.fit_generator(
     steps_per_epoch= ceil(len(train_samples) * IMAGES_PER_CSV_LINE / BATCH_SIZE),
     validation_data=validation_generator,
     validation_steps=ceil(len(validation_samples) * IMAGES_PER_CSV_LINE / BATCH_SIZE),
-    epochs=2,
+    epochs=10,
     verbose=1
 )
 model.save('model.h5')
