@@ -10,8 +10,8 @@ from math import ceil
 from scipy import ndimage
 
 
-CORRECTION = 0.15
-IMAGES_PER_CSV_LINE = 108
+CORRECTION = 0.15  # Steering angle to add or subtract to left and right images
+IMAGES_PER_CSV_LINE = 108  # Center, left and right images + data augmentation
 BATCH_SIZE = IMAGES_PER_CSV_LINE * 4
 DATA_DIRECTORY = './simulator-data/IMG/'
 IMAGE_WIDTH = 320
@@ -24,7 +24,7 @@ height, width = IMAGE_HEIGHT, IMAGE_WIDTH
 h_half = int(height / 2)
 w_half = int(width / 2)
 
-
+# Areas (rectangles) that are used to perform data augmentation by removing a section of the images
 BOTTOM_LEFT = np.array([[0, height], [w_half, height], [w_half, h_half], [0, h_half]])
 BOTTOM_RIGHT = np.array([[w_half, h_half], [w_half, height], [width, height], [width, h_half]])
 LEFT_HALF = np.array([[0, 0], [0, height], [w_half, height], [w_half, 0]])
@@ -39,17 +39,30 @@ def remove_section(image, polygon_points):
 
 
 def get_current_path(path):
+    '''
+    Since the model might be trained in a different computer/path
+    than it was recorded, we need this function to correct the path.
+    '''
     filename = path.split('/')[-1]
     return DATA_DIRECTORY + filename
 
 
 def read_img_rgb(img_path):
+    '''
+    Given an image path, get the updated path, read the image
+    and convert BGR to RGB (drive.py reads images in RGB)
+    '''
     current_img_path = get_current_path(img_path)
     img = cv2.imread(current_img_path)
     return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 
 def get_images_with_measurements(line):
+    '''
+    Given a tuple with the values of a csv line, load the center image with its steering angle,
+    left and right images with their corrected measurement and then perform data augmentation
+    by doing rotation and removing sections of the image
+    '''
     center_img = read_img_rgb(line[0])
     left_img = read_img_rgb(line[1])
     right_img = read_img_rgb(line[2])
@@ -86,6 +99,10 @@ def get_images_with_measurements(line):
 
 
 def generator(samples, batch_size=32):
+    '''
+    Given a list of what it was read from the csv file + the batch size, it creates a generator
+    that provides a shuffled batch of images with their measurements. It includes augmented data.
+    '''
     num_samples = len(samples)
     batch_size_pre_augmentated = ceil(batch_size / IMAGES_PER_CSV_LINE)
     # Loop forever so the generator never terminates
@@ -114,6 +131,7 @@ with open('./simulator-data/driving_log.csv', 'r') as csvfile:
     for line in reader:
         samples.append(line)
 
+# Actual model
 model = Sequential()
 model.add(Cropping2D(cropping=((CROP_TOP, CROP_BOTTOM), (0, 0)), input_shape=(160, 320, 3)))
 model.add(Lambda(lambda x: x / 255.0 - 0.5))
@@ -136,11 +154,13 @@ model.add(Dense(10))
 model.add(Dropout(0.2))
 model.add(Dense(1))
 
-# compile and train the model using the generator function
+# Compile and train the model using the generator function
 train_samples, validation_samples = train_test_split(samples, test_size=0.2)
 train_generator = generator(train_samples, BATCH_SIZE)
+# TODO: Stop performing data augmentation for validation_generator
 validation_generator = generator(validation_samples, BATCH_SIZE)
 
+# Checkpoint to save after an epoch got a better val_loss
 checkpoint = ModelCheckpoint(
     "model.h5",
     monitor='val_loss',
