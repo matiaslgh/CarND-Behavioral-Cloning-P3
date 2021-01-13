@@ -11,7 +11,7 @@ from scipy import ndimage
 
 
 CORRECTION = 0.15
-IMAGES_PER_CSV_LINE = 270
+IMAGES_PER_CSV_LINE = 108
 BATCH_SIZE = IMAGES_PER_CSV_LINE * 4
 DATA_DIRECTORY = './simulator-data/IMG/'
 IMAGE_WIDTH = 320
@@ -24,49 +24,17 @@ height, width = IMAGE_HEIGHT, IMAGE_WIDTH
 h_half = int(height / 2)
 w_half = int(width / 2)
 
-TOP_RIGHT = np.array([[w_half, 0], [w_half, h_half], [width, h_half], [width, 0]])
-TOP_LEFT = np.array([[0, 0], [0, h_half], [w_half, h_half], [w_half, 0]])
+
 BOTTOM_LEFT = np.array([[0, height], [w_half, height], [w_half, h_half], [0, h_half]])
 BOTTOM_RIGHT = np.array([[w_half, h_half], [w_half, height], [width, height], [width, h_half]])
-
 LEFT_HALF = np.array([[0, 0], [0, height], [w_half, height], [w_half, 0]])
 BOTTOM_HALF = np.array([[0, h_half], [0, height], [width, height], [width, h_half]])
 RIGHT_HALF = np.array([[w_half, 0], [w_half, height], [width, height], [width, 0]])
-TOP_HALF = np.array([[0, 0], [0, h_half], [width, h_half], [width, 0]])
-
-TOP_RIGHT_TRIANGLE = np.array([[w_half, 0], [width, h_half], [width, 0]])
-TOP_LEFT_TRIANGLE = np.array([[0, 0], [0, h_half], [w_half, 0]])
-BOTTOM_LEFT_TRIANGLE = np.array([[0, height], [w_half, height], [0, h_half]])
-BOTTOM_RIGHT_TRIANGLE = np.array([[w_half, height], [width, height], [width, h_half]])
 
 
 def remove_section(image, polygon_points):
     result = np.copy(image)
     cv2.fillConvexPoly(result, polygon_points, 0)
-    return result
-
-
-def remove_four_corners_triangle(image):
-    result = remove_section(image, TOP_RIGHT_TRIANGLE)
-    result = remove_section(result, TOP_LEFT_TRIANGLE)
-    result = remove_section(result, BOTTOM_LEFT_TRIANGLE)
-    result = remove_section(result, BOTTOM_RIGHT_TRIANGLE)
-    return result
-
-
-def set_padding_black(image, thickness_percentage=16):
-    padding = int(height * thickness_percentage / 100)
-
-    LEFT = np.array([[0, 0], [0, height], [padding, height], [padding, 0]])
-    BOTTOM = np.array([[0, height - padding], [0, height], [width, height], [width, height - padding]])
-    RIGHT = np.array([[width - padding, 0], [width - padding, height], [width, height], [width, 0]])
-    TOP = np.array([[0, 0], [0, padding], [width, padding], [width, 0]])
-
-    result = remove_section(image, LEFT)
-    result = remove_section(result, BOTTOM)
-    result = remove_section(result, RIGHT)
-    result = remove_section(result, TOP)
-
     return result
 
 
@@ -104,27 +72,15 @@ def get_images_with_measurements(line):
         data_with_rotation.append((ndimage.rotate(data[0], 10, reshape=False), data[1]))
         data_with_rotation.append((ndimage.rotate(data[0], -10, reshape=False), data[1]))
 
-    # 18 * 15 = 270 images
+    # 18 * 6 = 108 images
     result = []
     for data in data_with_rotation:
         result.append(data)
-
-        result.append((remove_section(data[0], TOP_RIGHT), data[1]))
-        result.append((remove_section(data[0], TOP_LEFT), data[1]))
         result.append((remove_section(data[0], BOTTOM_LEFT), data[1]))
         result.append((remove_section(data[0], BOTTOM_RIGHT), data[1]))
-
         result.append((remove_section(data[0], LEFT_HALF), data[1]))
         result.append((remove_section(data[0], BOTTOM_HALF), data[1]))
         result.append((remove_section(data[0], RIGHT_HALF), data[1]))
-        result.append((remove_section(data[0], TOP_HALF), data[1]))
-        result.append((set_padding_black(data[0]), data[1]))
-
-        result.append((remove_section(data[0], BOTTOM_RIGHT_TRIANGLE), data[1]))
-        result.append((remove_section(data[0], TOP_RIGHT_TRIANGLE), data[1]))
-        result.append((remove_section(data[0], TOP_LEFT_TRIANGLE), data[1]))
-        result.append((remove_section(data[0], BOTTOM_LEFT_TRIANGLE), data[1]))
-        result.append((remove_four_corners_triangle(data[0]), data[1]))
 
     return result
 
