@@ -27,7 +27,7 @@ My project includes the following files:
 - drive.py for driving the car in autonomous mode
 - model.h5 containing a trained convolution neural network
 - writeup_report.md summarizing the results
-- best-run.mp4 to see how the model perform in an entire lap
+- best-run.mp4 to see how the model performs in an entire lap
 
 #### 2. Submission includes functional code
 
@@ -123,3 +123,13 @@ The final model architecture consisted of a convolution neural network with the 
 | Fully connected | outputs 10                                           |
 | Dropout         | rate=0.2                                             |
 | Fully connected | outputs 1                                            |
+
+#### 3. Creation of the Training Set & Training Process
+
+As described above, I drove the car in both tracks, 2 laps in one direction and 2 laps in the opposite direction.
+
+I also recorded some parts of the car driving from out of the road into the road to teach the model how to return to the road if something went wrong.
+
+The process of data augmentation was also described above and basically I generated 105 images from the 3 provided in every line of the csv file. This was mde by flipping the image horizontally, rotating them a little, and removing some parts of the image.
+
+I used a generator that given the samples of the csv file, and the batch size, returns the images with their steering angles, including the augmented data. Then I trained for 10 epochs but always saving the model with a checkpoint if the validation loss had improved compared to the previous epoch.
